@@ -6,11 +6,13 @@ output: html_notebook
 Так можна встановити пакети
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 install.packages('tidyverse')
+install.packages("lubridate")
 ```
 
 Ця функція завантажить сторонню бібліотеку (пакет) у робоче середовище
 ```{r include=FALSE}
 library(tidyverse)
+library(lubridate)
 ```
 
 Прочитаймо дані!
@@ -39,13 +41,126 @@ df$num %>% sum()
 Півтора мільйони? Навряд чи!
 ```{r}
 df %>%
+  filter(Province.State == "Beijing") %>%
+  qplot(x = date, y = num, data = .)
+```
+Ми дізнались:
+1) Наша колонка дати *не* сприймається як дата (R сприцмає її як категорійну змінну)!
+2) Показано кумулятивні випадки — суму, а не лише зареєстровані в цей день.
+Будь ми не такі уважні, заявили б, що у світі півтора мільйони хворих, була б паніка згірше Медоборів і Санджар…
+
+Як рахується кумулятивна сума?
+`x[i] + sum(x[:i-1])`
+Зробімо зворотню дію
+
+Повернемось до цього пізніше, а поки подивимось дані на останню дату, в якій більше відбулось заражень
+
+```{r}
+df$date <- as.POSIXct(df$date, format = "%m.%e.%Y")
+
+df$date[1:10]
+
+max(df$date)
+
+df %>%
+  filter(Province.State == "Beijing") %>%
+  qplot(x = date, y = num, data = ., geom = "line")
+
+```
+
+
+```{r}
+?group_by
+
+country_total_cases <- df %>%
+  filter(date == "2020-02-26") %>%
+  group_by(Country.Region) %>%
+  summarise(n = sum(num)) %>%
+  arrange(-n)
+
+country_total_cases
+```
+
+Мнемонічне правило каже, що статистика починається там, де є хоч 30 спостережень.  https://www.researchgate.net/post/What_is_the_rationale_behind_the_magic_number_30_in_statistics
+
+Маємо 12 країн, де понад 30 випадків захворювання. Подивимось, яка смертність від вірусу цих країнах
+
+```{r}
+deadly <- read.csv("data/time_series_19-covid-Deaths.csv") %>%
+    pivot_longer(cols = - c("Province.State", "Country.Region", "Lat", "Long"),
+                 names_to = "date",
+                 values_to = "deaths",
+                 names_prefix = "X"
+                 )
+
+deadly$date <- as.POSIXct(deadly$date, format = "%m.%e.%Y")
+
+deadly$deaths %>% sum()    # the same, it's aggregated
+
+deadly_by_country <- deadly %>%
+  filter(date == "2020-02-26") %>%
+  group_by(Country.Region) %>%
+  summarise(deaths = sum(deaths)) %>%
+  arrange(-deaths) %>%
+  filter(Country.Region != "Others")
+
+deadly_by_country
+```
+
+```{r}
+cases_deaths <- country_total_cases %>%
+  filter(n > 30) %>%
+  left_join(deadly_by_country) %>%
+  fill(deaths) %>%
+  mutate(death_rate = deaths / n * 100)
+
+cases_deaths
+
+world_rate <- df %>%
+  left_join(deadly) %>%
+  filter(num > 0 & date == "2020-02-26") %>%
+  summarise(deaths = sum(deaths), num = sum(num), deadly_rate = deaths / num * 100)
+
+world_rate
+```
+
+Довірчі інтервали? Ми маємо цифри, розраховані на невеликих сукупностях, і хочемо знати, які висновки з них можна зробити
+
+```{r}
+cases_deaths <- cases_deaths %>%
+  mutate(error = qnorm(0.95) * death_rate / sqrt(n),
+         min_conf_death_rate = death_rate - error,
+         max_conf_death_rate = death_rate + error,
+         ) %>%
+  arrange(death_rate) %>%
+  mutate(Country.Region = factor(.$Country.Region, levels = .$Country.Region))
+
+cases_deaths
+```
+
+Якщо довірчі інтервали перетинаються — різниці між показниками нема. Якщо ні — є статистично значуща різниця.
+
+```{r}
+ggplot(cases_deaths, aes(Country.Region, death_rate)) + 
+  geom_bar(stat = "identity", fill = "#802E66", width = 0.3) + 
+  geom_errorbar(aes(ymin = min_conf_death_rate, ymax = max_conf_death_rate),
+                color = "black", width = 0.3) + 
+  coord_flip() + 
+  theme_minimal()
 ```
 
 
 
 
 ```{r}
+diff(df$num)
+```
 
+
+
+```{r}
+df %>%
+  filter(Province.State == "Beijing") 
 ```
 
 
