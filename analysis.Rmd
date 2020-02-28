@@ -68,6 +68,7 @@ df %>%
 
 ```
 
+Агрегація — як звідна таблиця. У R `group_by` та `summarize` працюють в парі, одне без іншого використовують рідко
 
 ```{r}
 ?group_by
@@ -151,14 +152,14 @@ ggplot(cases_deaths, aes(Country.Region, death_rate)) +
 ggplot(cases_deaths, aes(Country.Region, death_rate)) + 
   geom_bar(stat = "identity", fill = "#802E66", width = 0.3) + 
   geom_errorbar(aes(ymin = min_conf_death_rate, ymax = max_conf_death_rate),
-                color = "black", width = 0.3) + 
+                color = "black", width = 0.2, size = 0.3) + 
   coord_flip() + 
   theme_minimal()
 ```
 
 Це можна робити безкінечно: вибирати шрифти, писати зоголовки, підбирати відступи… Це набір параметрів, які можна знайти в [документації](https://ggplot2.tidyverse.org/reference/index.html)
 
-**Наша метрика рівня смертності навмисне хибна! Яким чином?**
+**Наша метрика рівня смертності навмисне (так, щоб тренуватись розрізняти помилки) хибна! Яким чином?**
 
 
 

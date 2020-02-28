@@ -1,0 +1,87 @@
+---
+title: "IRF data visualization"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+
+df <- read.csv("data/time_series_19-covid-Confirmed.csv") %>%
+    pivot_longer(cols = - c("Province.State", "Country.Region", "Lat", "Long"),
+                 names_to = "date",
+                 values_to = "confirmed",
+                 names_prefix = "X"
+                 ) %>%
+    mutate(date = as.POSIXct(.$date, format = "%m.%e.%Y"))
+```
+
+Ми не хочемо три рази копіювати й вставляти ці 7 рядків коду з незначними змінами (назва файлу і колонка). Тут у нас 3 файли, а бувають ситуації, коли їх 333. Вручну ми не впораємось. 
+
+Тому познайомимось з функцією:  
+
+```{r}
+read_process_data <- function(fname, column) {    # це оголошення функції: назва function(назва_аргументу1, назва_аргумента2) {}
+  read.csv(fname) %>%
+    pivot_longer(cols = - c("Province.State", "Country.Region", "Lat", "Long"),
+                 names_to = "date",
+                 values_to = column,
+                 names_prefix = "X"
+                 ) %>%
+    mutate(date = as.POSIXct(.$date, format = "%m.%e.%Y"))    # останній результат функція повертає.
+    # Якщо очікуєте іншу поведінку, функція return() поверне потрібне вам значення: return(5) —і функція поверне 5
+}    # не забудьмо закрити "тіло" функції
+
+df <- df %>%
+  left_join(read_process_data("data/time_series_19-covid-Deaths.csv", "deaths")) %>%
+  left_join(read_process_data("data/time_series_19-covid-Recovered.csv", "recovered"))
+
+df
+```
+
+Ми написали в 2 рази менше коду, супер!  
+
+Для початку, позбудьмося колонки регіону, вона для нас зайва, і агрегуємо дані за країнами й днями
+```{r}
+df <- df %>%
+  group_by(Country.Region, date) %>%
+  summarise(confirmed = sum(confirmed),
+            deaths = sum(deaths),
+            recovered = sum(recovered),
+            ) %>%
+  rename(country = Country.Region)    # перейменуємо змінну, бо набридло писати її довгу назву
+
+df
+```
+
+Згадаємо, що дані по окремим країнам акумульовані: це сумарний показник, а не кількість подій у певний день. Пора це виправити
+
+Приклад на простий даних:
+```{r}
+test <- 1:10
+test
+
+cum_test <- cumsum(test)    # Так перетворені наші дані. Нам треба це обернути
+cum_test
+
+diff(cum_test)    # маємо початкові дані, крім першого значення, не проблема
+
+c(1, diff(cum_test))    # те, що нам треба
+```
+
+От тільки наші дані кумулятивні за країнами.
+
+Знову їх агрегуємо:
+```{r}
+df <- df %>%
+  group_by(Country.Region, date) %>%
+  summarise(confirmed = sum(confirmed),
+            deaths = sum(deaths),
+            recovered = sum(recovered),
+            ) %>%
+  rename(country = Country.Region)    # перейменуємо змінну, бо набридло писати її довгу назву
+
+df
+```
+
+
+
