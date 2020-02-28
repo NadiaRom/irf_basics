@@ -5,6 +5,7 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
+library(ggplot2)
 
 df <- read.csv("data/time_series_19-covid-Confirmed.csv") %>%
     pivot_longer(cols = - c("Province.State", "Country.Region", "Lat", "Long"),
@@ -86,5 +87,32 @@ df %>% filter(country == "Mainland China")
 # write.csv(df, "clean_daily_countries.csv", row.names = FALSE)   # закоментуйте, аби ненароком не переписати чисті дані
 ```
 
+## Подивимось, як вірус ширився світом
+```{r}
+ggplot(df, aes(date, confirmed)) +
+  geom_bar(stat = "sum")
+```
 
+
+```{r}
+df %>%
+  group_by(country) %>%
+  filter(sum(confirmed) > 30 & country != "Mainland China" & country != "Others") %>%
+  ungroup() %>% 
+  ggplot(aes(date, confirmed)) +
+    geom_bar(stat = "identity") +
+    facet_grid(rows = vars(country))
+```
+
+```{r}
+df %>%
+  group_by(country) %>%
+  filter(sum(confirmed) > 30 & country != "Mainland China" & country != "Others") %>%
+  ungroup() %>% 
+  ggplot(aes(date, 1, fill = "red", alpha = confirmed)) +
+    geom_bar(stat = "identity") +
+    facet_wrap(vars(country)) +
+   axis
+    theme_minimal()
+```
 
