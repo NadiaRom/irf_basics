@@ -52,7 +52,6 @@ df <- df %>%
 
 df
 ```
-
 Згадаємо, що дані по окремим країнам акумульовані: це сумарний показник, а не кількість подій у певний день. Пора це виправити
 
 Приклад на простий даних:
@@ -73,14 +72,18 @@ c(1, diff(cum_test))    # те, що нам треба
 Знову їх агрегуємо:
 ```{r}
 df <- df %>%
-  group_by(Country.Region, date) %>%
-  summarise(confirmed = sum(confirmed),
-            deaths = sum(deaths),
-            recovered = sum(recovered),
+  group_by(country) %>%
+    # ми робимо однакове перетворення з трьома рядками, не будемо повторюватись за допомогою mutate_at
+  mutate_at(c("confirmed", "deaths", "recovered"),    # вектор колонок
+            ~c(.[1], diff(.))    # "~" — спосіб написати функцію в 1 рядок, аргумент це крапка
             ) %>%
-  rename(country = Country.Region)    # перейменуємо змінну, бо набридло писати її довгу назву
+  ungroup()
 
-df
+df %>% filter(country == "Mainland China")
+```
+Наші дані охайні та правильні, ми можемо дізнатись від них багато цікавого. Збережемо їх:
+```{r}
+# write.csv(df, "clean_daily_countries.csv", row.names = FALSE)   # закоментуйте, аби ненароком не переписати чисті дані
 ```
 
 
