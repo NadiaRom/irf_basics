@@ -109,10 +109,9 @@ df %>%
   group_by(country) %>%
   filter(sum(confirmed) > 30 & country != "Mainland China" & country != "Others") %>%
   ungroup() %>% 
-  ggplot(aes(date, 1, fill = "red", alpha = confirmed)) +
-    geom_bar(stat = "identity") +
+  ggplot(aes(date, 1, alpha = confirmed)) +
+    geom_bar(stat = "identity", fill = "red") +
     facet_wrap(vars(country)) +
-   axis
     theme_minimal()
 ```
 
