@@ -110,7 +110,8 @@ df %>%
   filter(sum(confirmed) > 30 & country != "Mainland China" & country != "Others") %>%
   ungroup() %>% 
   ggplot(aes(date, 1, alpha = confirmed)) +
-    geom_bar(stat = "identity", fill = "red") +
+    geom_bar(stat = "identity", fill = "red", color = NA) +
+    scale_alpha(range = c(0, 1)) + 
     facet_wrap(vars(country)) +
     theme_minimal()
 ```
